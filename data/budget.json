@@ -394,6 +394,18 @@
    "nota": "Revisado em 03/10/2026: os R$ 30.000 do desenvolvimento da Pacer ficam inteiros em 2026, entre out e dez. Nenhuma despesa da PoC em 2027."
   },
   {
+   "chave": "diversos",
+   "rotulo": "Despesas administrativas diversas",
+   "grupo": "Overhead",
+   "natureza": "firme",
+   "vigente": {
+    "2026-10": 240.0,
+    "2026-11": 240.0,
+    "2026-12": 240.0
+   },
+   "nota": "Criada em 03/10/2026 para absorver material de escritório, vale refeição e IOF, que até então apareciam como fora do orçamento. R$ 720 no trimestre, arredondado a partir dos R$ 715 já realizados. Não existe em 2027."
+  },
+  {
    "chave": "contabilidade",
    "rotulo": "Contabilidade",
    "grupo": "Overhead",
