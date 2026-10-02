@@ -1,0 +1,565 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TAT Operating · Painel financeiro</title>
+<style>
+  :root {
+    color-scheme: light;
+    --surface-0: #f6f5f2;
+    --surface-1: #fcfcfb;
+    --surface-2: #f0efec;
+    --border:    #e2e0db;
+    --text-1:    #0b0b0b;
+    --text-2:    #52514e;
+    --text-3:    #87857e;
+    --s1: #2a78d6;
+    --s2: #eb6834;
+    --s3: #1baf7a;
+    --neutral:   #c9c7c0;
+    --good:      #008300;
+    --crit:      #e34948;
+    --grid:      #eceae5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --surface-0: #121211;
+      --surface-1: #1a1a19;
+      --surface-2: #232322;
+      --border:    #343432;
+      --text-1:    #ffffff;
+      --text-2:    #c3c2b7;
+      --text-3:    #8d8b82;
+      --s1: #3987e5;
+      --s2: #d95926;
+      --s3: #199e70;
+      --neutral:   #4a4a46;
+      --good:      #3fa63f;
+      --crit:      #e66767;
+      --grid:      #2a2a28;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface-0: #121211; --surface-1: #1a1a19; --surface-2: #232322;
+    --border: #343432; --text-1: #ffffff; --text-2: #c3c2b7; --text-3: #8d8b82;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70;
+    --neutral: #4a4a46; --good: #3fa63f; --crit: #e66767; --grid: #2a2a28;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--surface-0); color: var(--text-1);
+    font: 15px/1.55 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 32px 16px 80px; }
+
+  header { display: flex; flex-wrap: wrap; gap: 16px; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
+  h1 { font-size: 21px; font-weight: 650; margin: 0; letter-spacing: -0.01em; }
+  .sub { color: var(--text-3); font-size: 13px; }
+  .theme { background: none; border: 1px solid var(--border); color: var(--text-2); border-radius: 7px; padding: 5px 11px; font-size: 12px; cursor: pointer; }
+  .theme:hover { background: var(--surface-2); }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 24px 0 32px; }
+  .tile { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+  .tile .lbl { font-size: 12px; color: var(--text-3); margin-bottom: 7px; }
+  .tile .val { font-size: 25px; font-weight: 650; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .tile .note { font-size: 12px; color: var(--text-2); margin-top: 5px; }
+
+  section { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 20px 22px 24px; margin-bottom: 20px; }
+  h2 { font-size: 15px; font-weight: 640; margin: 0 0 3px; }
+  .desc { font-size: 13px; color: var(--text-2); margin: 0 0 18px; max-width: 72ch; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 14px; font-size: 12.5px; color: var(--text-2); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .sw { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+  .sw.line { height: 3px; border-radius: 2px; width: 14px; }
+
+  .chart { width: 100%; overflow-x: auto; }
+  svg { display: block; margin: 0 auto; }
+  .ax { font-size: 11px; fill: var(--text-3); }
+  .axv { font-size: 11px; fill: var(--text-3); font-variant-numeric: tabular-nums; }
+  .gl { stroke: var(--grid); stroke-width: 1; }
+  .dl { font-size: 10.5px; fill: var(--text-2); font-variant-numeric: tabular-nums; }
+  .hit { fill: transparent; cursor: pointer; }
+  .hit:hover ~ .hv, .hv.on { opacity: 1; }
+
+  .tip { position: fixed; pointer-events: none; z-index: 50; background: var(--surface-1); border: 1px solid var(--border);
+         border-radius: 9px; padding: 9px 12px; font-size: 12.5px; box-shadow: 0 6px 24px rgba(0,0,0,.14); opacity: 0; transition: opacity .09s; max-width: 280px; }
+  .tip.on { opacity: 1; }
+  .tip b { display: block; margin-bottom: 5px; font-size: 12px; color: var(--text-2); font-weight: 600; }
+  .tip .r { display: flex; justify-content: space-between; gap: 18px; font-variant-numeric: tabular-nums; }
+  .tip .r i { font-style: normal; color: var(--text-2); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+  th, td { padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; white-space: normal; }
+  th { font-weight: 600; color: var(--text-2); font-size: 12px; position: sticky; top: 0; background: var(--surface-1); }
+  tbody tr:hover { background: var(--surface-2); }
+  td.pos { color: var(--good); } td.neg { color: var(--crit); }
+  .grp td { font-weight: 640; background: var(--surface-2); }
+  .tbl-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 9px; }
+
+  .filtros { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 20px; }
+  .filtros .cap { font-size: 12px; color: var(--text-3); margin-right: 2px; }
+  .filtros button { background: var(--surface-1); border: 1px solid var(--border); color: var(--text-2);
+                    border-radius: 7px; padding: 6px 13px; font-size: 12.5px; cursor: pointer; }
+  .filtros button:hover { background: var(--surface-2); }
+  .filtros button[aria-pressed="true"] { background: var(--text-1); border-color: var(--text-1); color: var(--surface-1); font-weight: 600; }
+
+  details { margin-top: 14px; }
+  summary { cursor: pointer; font-size: 13px; color: var(--text-2); }
+  .flag { background: var(--surface-2); border-left: 3px solid var(--s2); padding: 11px 14px; border-radius: 0 8px 8px 0; font-size: 13px; color: var(--text-2); margin-top: 16px; }
+  .err { background: var(--surface-2); border-left: 3px solid var(--crit); padding: 14px; border-radius: 0 8px 8px 0; }
+  footer { color: var(--text-3); font-size: 12px; margin-top: 36px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <h1>TAT Operating · Painel financeiro</h1>
+      <div class="sub" id="sub">carregando…</div>
+    </div>
+    <button class="theme" id="theme">tema</button>
+  </header>
+
+  <div class="filtros" id="filtros" hidden></div>
+  <div id="app"></div>
+
+  <footer>
+    Dados lidos do Omie pelo GitHub Actions. Os números agregados ficam em <code>data/actuals.json</code>;
+    o orçamento em <code>data/budget.json</code>. Nenhuma credencial trafega pelo navegador.
+  </footer>
+</div>
+
+<div class="tip" id="tip"></div>
+
+<script>
+const BRL = n => n.toLocaleString('pt-BR', {style:'currency', currency:'BRL', maximumFractionDigits:0});
+const BRL2 = n => n.toLocaleString('pt-BR', {style:'currency', currency:'BRL', minimumFractionDigits:2, maximumFractionDigits:2});
+const MES = {'01':'jan','02':'fev','03':'mar','04':'abr','05':'mai','06':'jun','07':'jul','08':'ago','09':'set','10':'out','11':'nov','12':'dez'};
+const rotMes = m => MES[m.slice(5)] + '/' + m.slice(2,4);
+const el = (t,a={},...k) => { const n=document.createElementNS(t==='svg'||SVG.has(t)?'http://www.w3.org/2000/svg':'http://www.w3.org/1999/xhtml',t);
+  for(const[p,v] of Object.entries(a)) v!==null&&v!==undefined&&n.setAttribute(p,v); k.flat().forEach(c=>c!==null&&c!==undefined&&n.append(c)); return n; };
+const SVG = new Set(['svg','g','rect','line','path','text','circle','polyline','defs','clipPath','tspan']);
+
+const tip = document.getElementById('tip');
+function mostrarTip(e, titulo, linhas){
+  tip.innerHTML = '';
+  tip.append(el('b',{},titulo));
+  linhas.forEach(([k,v,cor]) => {
+    const r = el('div',{class:'r'});
+    const esq = el('i',{});
+    if(cor){ const s=el('span',{class:'sw',style:`background:${cor};margin-right:6px`}); esq.append(s); }
+    esq.append(k); r.append(esq, el('span',{},v)); tip.append(r);
+  });
+  tip.classList.add('on');
+  const x = Math.min(e.clientX + 14, innerWidth - 300);
+  tip.style.left = x + 'px';
+  tip.style.top = Math.max(10, e.clientY - 12) + 'px';
+}
+const esconderTip = () => tip.classList.remove('on');
+
+document.getElementById('theme').onclick = () => {
+  const atual = document.documentElement.getAttribute('data-theme');
+  const escuro = atual ? atual === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  document.documentElement.setAttribute('data-theme', escuro ? 'light' : 'dark');
+};
+
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+/* teto redondo acima do maior valor, para a barra nao encostar na borda
+   e os rotulos do eixo cairem em numeros legiveis */
+function teto(max, divisoes=4){
+  if(!(max>0)) return 1;
+  const alvo = max * 1.08 / divisoes;
+  const mag = Math.pow(10, Math.floor(Math.log10(alvo)));
+  const passo = [1,1.2,1.5,2,2.5,3,4,5,6,8,10].map(f=>f*mag).find(p=>p>=alvo) || 10*mag;
+  return passo * divisoes;
+}
+
+/* ------------------------------------------------------------------ gráficos */
+
+function barrasAgrupadas({meses, series, altura=260, formato=BRL}){
+  const L=64, R=14, T=14, B=34;
+  /* com poucos meses o grafico espalha, para nao virar uma faixa estreita
+     perdida no meio da secao */
+  const poucos = meses.length <= 6;
+  const W = Math.max(640, meses.length * (poucos ? 185 : series.length * 15 + 26) + L + R);
+  const H = altura, ph = H - T - B, pw = W - L - R;
+  const max = teto(Math.max(0, ...series.flatMap(s => meses.map(m => s.dados[m] || 0))));
+  const esc = v => ph - (v / max) * ph;
+  const bw = pw / meses.length;
+  const g = el('svg',{viewBox:`0 0 ${W} ${H}`, width:W, height:H, role:'img'});
+  const area = el('g',{transform:`translate(${L},${T})`});
+
+  for(let i=0;i<=4;i++){
+    const y = (ph/4)*i, v = max - (max/4)*i;
+    area.append(el('line',{class:'gl', x1:0, y1:y, x2:pw, y2:y}));
+    area.append(el('text',{class:'axv', x:-9, y:y+4, 'text-anchor':'end'}, formato(v)));
+  }
+  meses.forEach((m,i)=>{
+    const x0 = i*bw;
+    area.append(el('text',{class:'ax', x:x0+bw/2, y:ph+19, 'text-anchor':'middle'}, rotMes(m)));
+    const larg = Math.min(poucos ? 40 : 16, (bw - 10) / series.length - 2);
+    const total = larg * series.length + 2 * (series.length - 1);
+    series.forEach((s,j)=>{
+      const v = s.dados[m] || 0; if(!v) return;
+      const x = x0 + (bw - total)/2 + j*(larg+2), y = esc(v), h = ph - y;
+      area.append(el('rect',{x, y, width:larg, height:Math.max(h,1), rx:4, fill:s.cor, 'shape-rendering':'crispEdges'}));
+    });
+    const hit = el('rect',{class:'hit', x:x0, y:0, width:bw, height:ph});
+    hit.addEventListener('mousemove', e => mostrarTip(e, rotMes(m),
+      series.map(s => [s.nome, formato(s.dados[m]||0), s.cor])));
+    hit.addEventListener('mouseleave', esconderTip);
+    area.append(hit);
+  });
+  g.append(area);
+  return g;
+}
+
+function barrasEmpilhadas({meses, series, altura=260}){
+  const L=64, R=14, T=14, B=34;
+  const poucos = meses.length <= 6;
+  const W = Math.max(640, meses.length*(poucos?170:52) + L + R), H=altura, ph=H-T-B, pw=W-L-R;
+  const totais = meses.map(m => series.reduce((a,s)=>a+(s.dados[m]||0),0));
+  const max = teto(Math.max(0, ...totais));
+  const bw = pw/meses.length, larg = Math.min(poucos?64:30, bw-16);
+  /* rotulo direto so onde ele informa: o maior, o menor e as pontas.
+     numero em cima de toda barra vira ruido e colide */
+  const iMax = totais.indexOf(Math.max(...totais));
+  const iMin = totais.indexOf(Math.min(...totais.filter(v=>v>0)));
+  const rotular = new Set(meses.length <= 6
+    ? meses.map((_,i)=>i)
+    : [0, meses.length-1, iMax, iMin]);
+  const g = el('svg',{viewBox:`0 0 ${W} ${H}`, width:W, height:H, role:'img'});
+  const area = el('g',{transform:`translate(${L},${T})`});
+  for(let i=0;i<=4;i++){
+    const y=(ph/4)*i, v=max-(max/4)*i;
+    area.append(el('line',{class:'gl',x1:0,y1:y,x2:pw,y2:y}));
+    area.append(el('text',{class:'axv',x:-9,y:y+4,'text-anchor':'end'}, BRL(v)));
+  }
+  meses.forEach((m,i)=>{
+    const x = i*bw + (bw-larg)/2;
+    let acc = 0;
+    area.append(el('text',{class:'ax', x:i*bw+bw/2, y:ph+19, 'text-anchor':'middle'}, rotMes(m)));
+    series.forEach(s=>{
+      const v = s.dados[m]||0; if(!v) return;
+      const h = (v/max)*ph, y = ph - acc - h;
+      area.append(el('rect',{x, y, width:larg, height:Math.max(h-2,1), rx:3, fill:s.cor}));
+      acc += h;
+    });
+    if(totais[i] && rotular.has(i))
+      area.append(el('text',{class:'dl', x:i*bw+bw/2, y:ph-acc-6, 'text-anchor':'middle'}, BRL(totais[i])));
+    const hit = el('rect',{class:'hit', x:i*bw, y:0, width:bw, height:ph});
+    hit.addEventListener('mousemove', e => mostrarTip(e, rotMes(m),
+      [...series.map(s=>[s.nome, BRL2(s.dados[m]||0), s.cor]), ['total', BRL2(totais[i])]]));
+    hit.addEventListener('mouseleave', esconderTip);
+    area.append(hit);
+  });
+  g.append(area);
+  return g;
+}
+
+function barrasHorizontais({itens, altura=null, cor=null}){
+  const L=230, R=96, T=6, B=6, lh=27;
+  const H = (altura || itens.length*lh) + T + B, W=940, pw=W-L-R;
+  const max = Math.max(1, ...itens.map(i=>i.valor));
+  const g = el('svg',{viewBox:`0 0 ${W} ${H}`, width:'100%', height:H, preserveAspectRatio:'xMinYMin meet', role:'img'});
+  const area = el('g',{transform:`translate(${L},${T})`});
+  itens.forEach((it,i)=>{
+    const y = i*lh, w = (it.valor/max)*pw, c = cor || it.cor || css('--s1');
+    area.append(el('text',{class:'ax', x:-11, y:y+lh/2+4, 'text-anchor':'end'}, it.nome));
+    area.append(el('rect',{x:0, y:y+5, width:Math.max(w,2), height:lh-12, rx:4, fill:c}));
+    area.append(el('text',{class:'dl', x:w+9, y:y+lh/2+4}, BRL(it.valor)));
+    const hit = el('rect',{class:'hit', x:-L, y:y, width:W, height:lh});
+    hit.addEventListener('mousemove', e => mostrarTip(e, it.nome,
+      [['valor', BRL2(it.valor)], ...(it.extra||[])]));
+    hit.addEventListener('mouseleave', esconderTip);
+    area.append(hit);
+  });
+  g.append(area);
+  return g;
+}
+
+/* --------------------------------------------------------------------- app */
+
+const ESTADO = { periodo: 'tudo' };
+let ORC, REAL, MESES_TODOS;
+
+const soma   = o => Object.values(o||{}).reduce((a,b)=>a+b,0);
+const somaM  = (o,ms) => ms.reduce((a,m)=>a+((o||{})[m]||0),0);
+
+function mesesDoPeriodo(){
+  if(ESTADO.periodo === 'tudo') return MESES_TODOS;
+  return MESES_TODOS.filter(m => m.startsWith(ESTADO.periodo));
+}
+
+async function carregar(){
+  const app = document.getElementById('app');
+  try {
+    [ORC, REAL] = await Promise.all([
+      fetch('data/budget.json').then(r=>r.json()),
+      fetch('data/actuals.json').then(r=>r.json()),
+    ]);
+  } catch (e) {
+    app.innerHTML = '<section class="err"><h2>Não consegui carregar os dados</h2>' +
+      '<p class="desc">Os arquivos <code>data/budget.json</code> e <code>data/actuals.json</code> precisam estar publicados. ' +
+      'Se o GitHub Actions ainda não rodou, dispare o workflow <em>Sincronizar Omie</em> na aba Actions.</p></section>';
+    return;
+  }
+
+  /* a linha do tempo e a uniao: o Omie tem meses que o orcamento nao tem
+     (ago e set/26 ja pagos, jan/28 de parcela) e o orcamento tem meses sem
+     lancamento. Filtrar por um dos dois esconderia dinheiro de verdade. */
+  const vistos = new Set(ORC.meses);
+  ['realizado_por_linha','realizado_por_centro','por_natureza',
+   'contas_a_pagar_por_status','contas_a_receber_por_status']
+    .forEach(k => Object.values(REAL[k]||{}).forEach(d => Object.keys(d).forEach(m=>vistos.add(m))));
+  MESES_TODOS = [...vistos].sort();
+
+  const q = new Date(REAL.gerado_em);
+  document.getElementById('sub').textContent =
+    'sincronizado em ' + q.toLocaleString('pt-BR', {dateStyle:'short', timeStyle:'short'}) +
+    ' · ' + REAL.titulos.a_pagar + ' títulos a pagar';
+
+  montarFiltros();
+  render();
+}
+
+function montarFiltros(){
+  const box = document.getElementById('filtros');
+  box.hidden = false; box.innerHTML = '';
+  box.append(el('span',{class:'cap'},'período'));
+  const anos = [...new Set(MESES_TODOS.map(m=>m.slice(0,4)))];
+  [['tudo','tudo'], ...anos.map(a=>[a,a])].forEach(([valor,rot])=>{
+    const b = el('button',{type:'button','aria-pressed': String(ESTADO.periodo===valor)}, rot);
+    b.onclick = () => { ESTADO.periodo = valor; montarFiltros(); render(); };
+    box.append(b);
+  });
+}
+
+/* as contas vem do Omie, nao de uma lista fixa: conta nova aparece sozinha */
+function detalheSaldos(){
+  const s = REAL.saldos || {};
+  if (Array.isArray(s.por_conta))
+    return s.por_conta.map(c => c.nome + ' ' + BRL2(c.saldo)).join(' · ');
+  /* formato antigo do actuals.json, antes da conta do Inter */
+  return ['omie_cash','btg'].filter(k => k in s)
+    .map(k => (k === 'btg' ? 'BTG' : 'Omie.CASH') + ' ' + BRL2(s[k])).join(' · ');
+}
+
+function render(){
+  const app = document.getElementById('app');
+  app.innerHTML = '';
+
+  const meses = mesesDoPeriodo();
+  const nat = REAL.por_natureza || {};
+  const firme = somaM(nat.firme, meses);
+  const cond  = somaM(nat.condicionado, meses);
+  const prov  = somaM(nat.provisao, meses);
+  const rotPeriodo = ESTADO.periodo === 'tudo'
+    ? rotMes(meses[0]) + ' a ' + rotMes(meses[meses.length-1])
+    : ESTADO.periodo;
+
+  /* o painel e publico, entao pro-labore, lucros e mutuo nao entram. Dizer isso
+     na tela e parte do numero: sem o aviso, quem olha acha que esta vendo tudo. */
+  const sig = REAL.sigilo || {};
+  if (sig.ativo) {
+    const av = el('section', {style:'border-left:3px solid var(--s2)'});
+    av.append(el('h2',{},'Este painel não mostra tudo'),
+      el('p',{class:'desc'},
+        'Por decisão dos sócios, ' + (sig.o_que || 'pró-labore, distribuição de lucros e mútuo') +
+        ' ficam fora. São ' + (sig.titulos_suprimidos || 0) + ' títulos, removidos antes de qualquer soma, ' +
+        'então nenhum total, centro de custo ou natureza nesta página os contém, nem permite deduzi-los. ' +
+        'Os números abaixo fecham entre si, mas não fecham com o Omie.'));
+    app.append(av);
+  }
+
+  /* ------------------------------------------------------------- stat tiles */
+  const tiles = el('div',{class:'tiles'});
+  const tile = (lbl,val,note,cor) => {
+    const d = el('div',{class:'tile'});
+    d.append(el('div',{class:'lbl'},lbl));
+    const v = el('div',{class:'val'}, val); if(cor) v.style.color = cor;
+    d.append(v); if(note) d.append(el('div',{class:'note'},note));
+    return d;
+  };
+  tiles.append(
+    tile('Saldo em caixa, hoje', BRL2(REAL.saldos.total), detalheSaldos()),
+    tile('Compromisso firme · ' + rotPeriodo, BRL(firme),
+      sig.ativo ? 'fornecedores e encargos' : 'pró-labore, fornecedores e encargos'));
+  /* com o sigilo ligado, "condicionado a lucro" e exatamente lucros mais mutuo:
+     o tile iria sempre marcar R$ 0 e so chamaria atencao para o que foi tirado */
+  if (!sig.ativo)
+    tiles.append(tile('Condicionado a lucro · ' + rotPeriodo, BRL(cond),
+      'distribuição e mútuo, só com balanço', css('--s2')));
+  tiles.append(
+    tile('Provisão orçamentária · ' + rotPeriodo, BRL(prov),
+      'sem documento fiscal, não é pagável', css('--text-3')),
+  );
+  app.append(tiles);
+
+  /* --------------------------------------------------- orçado x realizado */
+  const linhas = ORC.despesas;
+  const orcMes = {}, realMes = {};
+  meses.forEach(m=>{
+    orcMes[m]  = linhas.reduce((a,l)=>a+((l.vigente||{})[m]||0),0);
+    realMes[m] = Object.values(REAL.realizado_por_linha||{}).reduce((a,d)=>a+(d[m]||0),0);
+  });
+  const mesesComDado = meses.filter(m => orcMes[m] || realMes[m]);
+
+  const s1 = el('section');
+  s1.append(el('h2',{},'Orçado contra realizado, mês a mês'),
+    el('p',{class:'desc'},'O orçado é a versão vigente, com as revisões aprovadas em 02/10. O realizado é o que está lançado no Omie, inclusive a provisão orçamentária, que é a maior parte de 2027 e por isso faz as duas barras quase coincidirem naquele ano. Receita da Azul ainda não entra, por decisão de esperar o contrato.'));
+  const leg1 = el('div',{class:'legend'});
+  leg1.append(
+    el('span',{}, el('span',{class:'sw', style:`background:${css('--neutral')}`}), 'orçado'),
+    el('span',{}, el('span',{class:'sw', style:`background:${css('--s1')}`}), 'lançado no Omie'));
+  s1.append(leg1);
+  const c1 = el('div',{class:'chart'});
+  c1.append(barrasAgrupadas({meses: mesesComDado, series:[
+    {nome:'orçado', dados: orcMes, cor: css('--neutral')},
+    {nome:'lançado no Omie', dados: realMes, cor: css('--s1')},
+  ]}));
+  s1.append(c1);
+
+  const tOrc = mesesComDado.reduce((a,m)=>a+orcMes[m],0);
+  const tReal = mesesComDado.reduce((a,m)=>a+realMes[m],0);
+  const d = tReal - tOrc;
+  s1.append(el('div',{class:'flag'},
+    'No período selecionado o orçado soma ' + BRL2(tOrc) + ' e o lançado ' + BRL2(tReal) + ', diferença de ' +
+    BRL2(Math.abs(d)) + (d>0 ? ' acima do orçamento.' : ' abaixo do orçamento.')));
+  app.append(s1);
+
+  /* ------------------------------------------------- tabela por linha */
+  const s2 = el('section');
+  s2.append(el('h2',{},'Linha a linha'),
+    el('p',{class:'desc'},'Cada linha do orçamento vigente contra o que o Omie tem lançado.'));
+  const wrap = el('div',{class:'tbl-wrap'});
+  const tb = el('table');
+  tb.append(el('thead',{}, el('tr',{},
+    el('th',{},'Linha'), el('th',{},'Natureza'),
+    el('th',{},'Orçado'), el('th',{},'Lançado'), el('th',{},'Desvio'))));
+  const corpo = el('tbody');
+  const porGrupo = {};
+  linhas.forEach(l=>{ (porGrupo[l.grupo] ||= []).push(l); });
+  Object.entries(porGrupo).forEach(([grupo, ls])=>{
+    const gv = ls.reduce((a,l)=>a+somaM(l.vigente, meses),0);
+    const gr = ls.reduce((a,l)=>a+somaM(REAL.realizado_por_linha[l.chave], meses),0);
+    if(!(gv||gr)) return;
+    corpo.append(el('tr',{class:'grp'}, el('td',{},grupo), el('td',{},''),
+      el('td',{},BRL(gv)), el('td',{},BRL(gr)),
+      el('td',{class: gr-gv>0?'neg':(gr-gv<0?'pos':'')}, BRL(gr-gv))));
+    ls.forEach(l=>{
+      const vv = somaM(l.vigente, meses),
+            vr = somaM(REAL.realizado_por_linha[l.chave], meses);
+      if(!(vv||vr)) return;
+      const tr = el('tr',{},
+        el('td',{}, l.rotulo),
+        el('td',{style:'color:var(--s2);font-size:12px;text-align:left'},
+          l.natureza==='condicionado'?'condicionado a lucro':''),
+        el('td',{}, vv?BRL(vv):'—'), el('td',{}, vr?BRL(vr):'—'),
+        el('td',{class: vr-vv>0?'neg':(vr-vv<0?'pos':'')}, (vv||vr)?BRL(vr-vv):'—'));
+      if(l.nota) tr.title = l.nota;
+      corpo.append(tr);
+    });
+  });
+  /* o Omie tem lancamento que nenhuma linha do orcamento reconhece */
+  const chaves = new Set(linhas.map(l=>l.chave));
+  const orfas = Object.entries(REAL.realizado_por_linha||{})
+    .filter(([k])=>!chaves.has(k)).map(([k,dd])=>[k, somaM(dd, meses)]).filter(([,v])=>v>0);
+  if(orfas.length){
+    const tot = orfas.reduce((a,[,v])=>a+v,0);
+    corpo.append(el('tr',{class:'grp'}, el('td',{},'Fora do orçamento'), el('td',{},''),
+      el('td',{},'—'), el('td',{},BRL(tot)), el('td',{class:'neg'},BRL(tot))));
+    orfas.forEach(([k,v])=>corpo.append(el('tr',{},
+      el('td',{}, k), el('td',{style:'color:var(--text-3);font-size:12px;text-align:left'},'sem linha'),
+      el('td',{},'—'), el('td',{},BRL(v)), el('td',{class:'neg'},BRL(v)))));
+  }
+  tb.append(corpo);
+  wrap.append(tb); s2.append(wrap);
+  s2.append(el('div',{class:'flag'},'Passe o mouse sobre a linha para ver a premissa e a data da revisão. Desvio em vermelho é lançamento acima do orçado; em verde, abaixo.'));
+  app.append(s2);
+
+  /* -------------------------------------------------- centro de custo */
+  const cc = Object.entries(REAL.realizado_por_centro||{})
+    .map(([nome,dd])=>({nome, valor: somaM(dd, meses), serie:dd}))
+    .filter(i=>i.valor>0).sort((a,b)=>b.valor-a.valor);
+  if(cc.length){
+    const s3 = el('section');
+    s3.append(el('h2',{},'Despesa por centro de custo · ' + rotPeriodo),
+      el('p',{class:'desc'},'Rateio registrado em cada título. Uma cor só, porque aqui o que importa é a magnitude e não a identidade de cada centro.'));
+    const c3 = el('div',{class:'chart'});
+    c3.append(barrasHorizontais({itens: cc.map(i=>({...i,
+      extra: meses.filter(m=>i.serie[m]).slice(0,5).map(m=>[rotMes(m), BRL2(i.serie[m])])}))}));
+    s3.append(c3);
+    app.append(s3);
+  }
+
+  /* ----------------------------------------------------- caixa por natureza */
+  const mesesNat = meses.filter(m => (nat.firme?.[m]||0)+(nat.condicionado?.[m]||0)+(nat.provisao?.[m]||0) > 0);
+  if(mesesNat.length){
+    const s4 = el('section');
+    s4.append(el('h2',{},'Compromisso por natureza, mês a mês'),
+      el('p',{class:'desc'},'Firme é o que vence de fato. Condicionado a lucro só sai com balanço da CDIX e ata de distribuição. Provisão orçamentária não tem documento fiscal e nunca vai para aprovação de pagamento.'));
+    const leg4 = el('div',{class:'legend'});
+    leg4.append(
+      el('span',{}, el('span',{class:'sw', style:`background:${css('--s1')}`}), 'firme'),
+      el('span',{}, el('span',{class:'sw', style:`background:${css('--s2')}`}), 'condicionado a lucro'),
+      el('span',{}, el('span',{class:'sw', style:`background:${css('--neutral')}`}), 'provisão orçamentária'));
+    s4.append(leg4);
+    const c4 = el('div',{class:'chart'});
+    c4.append(barrasEmpilhadas({meses: mesesNat, series:[
+      {nome:'firme', dados: nat.firme||{}, cor: css('--s1')},
+      {nome:'condicionado a lucro', dados: nat.condicionado||{}, cor: css('--s2')},
+      {nome:'provisão orçamentária', dados: nat.provisao||{}, cor: css('--neutral')},
+    ], altura:300}));
+    s4.append(c4);
+    app.append(s4);
+  }
+
+  /* ------------------------------------------------- contas a pagar e receber */
+  const s5 = el('section');
+  s5.append(el('h2',{},'Situação dos títulos · ' + rotPeriodo),
+    el('p',{class:'desc'},'Por data de vencimento. Cancelado fica à vista de propósito: título cancelado no Omie some dos relatórios e some também da conferência.'));
+  const sp = REAL.contas_a_pagar_por_status||{}, sr = REAL.contas_a_receber_por_status||{};
+  const corStatus = (origem, st) =>
+    st.includes('cancel') ? css('--neutral')
+      : st.includes('atras') ? css('--crit')
+      : (origem==='a receber' ? css('--s3') : css('--s1'));
+  const statusItens = [
+      ...Object.entries(sp).map(([k,dd])=>({origem:'a pagar', st:k, valor: somaM(dd, meses)})),
+      ...Object.entries(sr).map(([k,dd])=>({origem:'a receber', st:k, valor: somaM(dd, meses)})),
+    ].filter(i=>i.valor>0).sort((a,b)=>b.valor-a.valor)
+     .map(i=>({nome: i.origem + ' · ' + i.st, valor: i.valor, cor: corStatus(i.origem, i.st)}));
+  if(statusItens.length){
+    const leg5 = el('div',{class:'legend'});
+    const usadas = new Map();
+    statusItens.forEach(i=>{
+      const rot = i.cor===css('--neutral') ? 'cancelado'
+                : i.cor===css('--crit') ? 'em atraso'
+                : (i.nome.startsWith('a receber') ? 'a receber' : 'a pagar');
+      usadas.set(rot, i.cor);
+    });
+    [...usadas].forEach(([rot,cor]) =>
+      leg5.append(el('span',{}, el('span',{class:'sw', style:`background:${cor}`}), rot)));
+    s5.append(leg5);
+    const c5 = el('div',{class:'chart'});
+    c5.append(barrasHorizontais({itens: statusItens}));
+    s5.append(c5);
+  } else {
+    s5.append(el('p',{class:'desc'},'Nenhum título com vencimento neste período.'));
+  }
+  app.append(s5);
+}
+
+carregar();
+</script>
+</body>
+</html>
